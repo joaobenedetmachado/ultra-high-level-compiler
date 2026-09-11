@@ -1,0 +1,7 @@
+Defina uma funcao chamada soma que recebe a e b e retorna a mais b.
+
+mostre soma(2, 3)
+
+Defina uma funcao chamada saudar que recebe nome
+    mostre nome
+    retorna nome
