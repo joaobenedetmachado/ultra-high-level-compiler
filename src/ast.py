@@ -172,6 +172,53 @@ class RepeatLoop(Loop):
         return f"RepeatLoop({self.count} times)"
 
 
+class IfStatement(Statement):
+    """Represents an if/else statement."""
+
+    def __init__(
+        self,
+        condition: Expression,
+        then_body: List[Statement],
+        else_body: Optional[List[Statement]] = None,
+    ):
+        self.condition = condition
+        self.then_body = then_body
+        self.else_body = else_body or []
+
+    def accept(self, visitor):
+        return visitor.visit_if_statement(self)
+
+    def __repr__(self):
+        return f"IfStatement({self.condition})"
+
+
+class PrintStatement(Statement):
+    """Represents a print/display statement."""
+
+    def __init__(self, expression: Expression):
+        self.expression = expression
+
+    def accept(self, visitor):
+        return visitor.visit_print_statement(self)
+
+    def __repr__(self):
+        return f"PrintStatement({self.expression})"
+
+
+class InputStatement(Statement):
+    """Represents a user input statement."""
+
+    def __init__(self, name: str, prompt: Optional[Expression] = None):
+        self.name = name
+        self.prompt = prompt
+
+    def accept(self, visitor):
+        return visitor.visit_input_statement(self)
+
+    def __repr__(self):
+        return f"InputStatement({self.name})"
+
+
 class Program(ASTNode):
     """Represents the entire program."""
 
