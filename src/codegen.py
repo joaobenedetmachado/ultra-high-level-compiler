@@ -4,7 +4,9 @@ from src.ast import (
     Assignment,
     ASTNode,
     BinaryOp,
+    Call,
     ForLoop,
+    FunctionDef,
     Identifier,
     IfStatement,
     InputStatement,
@@ -13,6 +15,7 @@ from src.ast import (
     PrintStatement,
     Program,
     RepeatLoop,
+    ReturnStatement,
     UnaryOp,
     VariableDeclaration,
     WhileLoop,
@@ -108,9 +111,10 @@ class CodeGenerator:
 
         return "\n".join(lines)
 
-    def visit_if_statement(self, node: IfStatement) -> str:
+    def visit_if_statement(self, node: IfStatement, as_elif: bool = False) -> str:
         """Generate code for an if/else statement."""
-        lines = [f"if {self.generate(node.condition)}:"]
+        keyword = "elif" if as_elif else "if"
+        lines = [f"{keyword} {self.generate(node.condition)}:"]
         self.indent()
         if node.then_body:
             for stmt in node.then_body:
@@ -121,14 +125,43 @@ class CodeGenerator:
             lines.append(self.get_indent() + "pass")
         self.dedent()
         if node.else_body:
-            lines.append("else:")
-            self.indent()
-            for stmt in node.else_body:
+            if len(node.else_body) == 1 and isinstance(node.else_body[0], IfStatement):
+                lines.append(self.visit_if_statement(node.else_body[0], as_elif=True))
+            else:
+                lines.append("else:")
+                self.indent()
+                for stmt in node.else_body:
+                    stmt_code = self.generate(stmt)
+                    if stmt_code:
+                        lines.append(self.get_indent() + stmt_code)
+                self.dedent()
+        return "\n".join(lines)
+
+    def visit_function_def(self, node: FunctionDef) -> str:
+        """Generate code for a function definition."""
+        params = ", ".join(node.params)
+        lines = [f"def {node.name}({params}):"]
+        self.indent()
+        if node.body:
+            for stmt in node.body:
                 stmt_code = self.generate(stmt)
                 if stmt_code:
                     lines.append(self.get_indent() + stmt_code)
-            self.dedent()
+        else:
+            lines.append(self.get_indent() + "pass")
+        self.dedent()
         return "\n".join(lines)
+
+    def visit_return_statement(self, node: ReturnStatement) -> str:
+        """Generate code for a return statement."""
+        if node.expression is None:
+            return "return"
+        return f"return {self.generate(node.expression)}"
+
+    def visit_call(self, node: Call) -> str:
+        """Generate code for a function call."""
+        args = ", ".join(self.generate(arg) for arg in node.args)
+        return f"{node.name}({args})"
 
     def visit_print_statement(self, node: PrintStatement) -> str:
         """Generate code for a print statement."""
