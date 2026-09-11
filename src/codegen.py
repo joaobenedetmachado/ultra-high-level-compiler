@@ -163,14 +163,14 @@ class CodeGenerator:
     def _python_type(self, type_name: str) -> str:
         """Convert natural language type to Python type hint."""
         type_map = {
-            "integer": "int",
+            "inteiro": "int",
             "int": "int",
-            "number": "float",
+            "numero": "float",
             "float": "float",
-            "string": "str",
+            "texto": "str",
             "str": "str",
-            "boolean": "bool",
+            "booleano": "bool",
             "bool": "bool",
-            "list": "list",
+            "lista": "list",
         }
         return type_map.get(type_name.lower(), "Any")
