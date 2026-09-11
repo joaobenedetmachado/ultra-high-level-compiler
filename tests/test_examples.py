@@ -83,3 +83,38 @@ for number in numbers:
             final_result = average * 2 + 10"""
 
     assert actual.strip() == expected.strip()
+
+
+def test_condicionais_uhl():
+    """Test that condicionais.uhl compiles to expected Python code."""
+    compiler = Compiler()
+    examples_dir = Path(__file__).parent.parent / "examples"
+    actual = compiler.compile_file(str(examples_dir / "condicionais.uhl"))
+
+    expected = """x = 8.0
+if x > 3:
+    print('x e grande')
+else:
+    print('x e pequeno')
+if x == 8:
+    print('acertou')"""
+
+    assert actual.strip() == expected.strip()
+
+
+def test_entrada_saida_uhl():
+    """Test that entrada_saida.uhl compiles to expected Python code."""
+    compiler = Compiler()
+    examples_dir = Path(__file__).parent.parent / "examples"
+    actual = compiler.compile_file(str(examples_dir / "entrada_saida.uhl"))
+
+    expected = """saudacao = 'Ola'
+print(saudacao)
+print('Bem-vindo')
+print(saudacao)
+nome = input('Qual seu nome?')
+print(nome)
+idade = input()
+print(idade)"""
+
+    assert actual.strip() == expected.strip()
