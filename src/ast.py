@@ -219,6 +219,48 @@ class InputStatement(Statement):
         return f"InputStatement({self.name})"
 
 
+class FunctionDef(Statement):
+    """Represents a function definition."""
+
+    def __init__(self, name: str, params: List[str], body: List[Statement]):
+        self.name = name
+        self.params = params
+        self.body = body
+
+    def accept(self, visitor):
+        return visitor.visit_function_def(self)
+
+    def __repr__(self):
+        return f"FunctionDef({self.name})"
+
+
+class ReturnStatement(Statement):
+    """Represents a return statement."""
+
+    def __init__(self, expression: Optional[Expression] = None):
+        self.expression = expression
+
+    def accept(self, visitor):
+        return visitor.visit_return_statement(self)
+
+    def __repr__(self):
+        return f"ReturnStatement({self.expression})"
+
+
+class Call(Expression):
+    """Represents a function call."""
+
+    def __init__(self, name: str, args: List[Expression]):
+        self.name = name
+        self.args = args
+
+    def accept(self, visitor):
+        return visitor.visit_call(self)
+
+    def __repr__(self):
+        return f"Call({self.name})"
+
+
 class Program(ASTNode):
     """Represents the entire program."""
 
