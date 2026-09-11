@@ -49,10 +49,10 @@ class Parser:
         if self.pos < len(self.tokens):
             token = self.tokens[self.pos]
             raise SyntaxError(
-                f"Parser error at line {token.line}, column {token.column}: {message}"
+                f"Erro do parser na linha {token.line}, coluna {token.column}: {message}"
             )
         else:
-            raise SyntaxError(f"Parser error at end of input: {message}")
+            raise SyntaxError(f"Erro do parser no fim da entrada: {message}")
 
     def current_token(self) -> Optional[Token]:
         """Get the current token."""
@@ -85,9 +85,9 @@ class Parser:
         token = self.current_token()
         if token is None or token.type != token_type:
             expected = f"{token_type.name}" + (f" with value {value!r}" if value else "")
-            self.error(f"Expected {expected}, got {token.type.name if token else 'EOF'}")
+            self.error(f"Esperado {expected}, recebido {token.type.name if token else 'EOF'}")
         if value is not None and word_of(token) != fold_word(value):
-            self.error(f"Expected {value!r}, got {token.value!r}")
+            self.error(f"Esperado {value!r}, recebido {token.value!r}")
         self.advance()
         return token
 
@@ -597,12 +597,12 @@ class Parser:
         """Parse a variable name from an identifier or keyword."""
         token = self.current_token()
         if token is None:
-            self.error("Expected identifier for variable name")
+            self.error("Esperado identificador para o nome da variavel")
             return ""
         if token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD):
             self.advance()
             return token.value
-        self.error(f"Expected identifier for variable name, got {token.type.name}")
+        self.error(f"Esperado identificador para o nome da variavel, recebido {token.type.name}")
         return ""
 
     def parse_variable_declaration(self) -> VariableDeclaration:
@@ -615,7 +615,7 @@ class Parser:
         self.skip_any_word({"uma", "um"})
         self.expect(TokenType.KEYWORD, "variavel")
         if not self.skip_any_word({"chamada", "chamado", "nomeada", "nomeado"}):
-            self.error("Expected 'chamada' or 'chamado' after 'variavel'")
+            self.error("Esperado 'chamada' ou 'chamado' depois de 'variavel'")
 
         name = self.parse_name()
 
@@ -656,7 +656,7 @@ class Parser:
             value = self.parse_expression()
             return Assignment(name, value)
 
-        self.error("Expected 'passa a ser' or 'agora e' after identifier")
+        self.error("Esperado 'passa a ser' ou 'agora e' depois do identificador")
 
     def parse_for_loop(self) -> ForLoop:
         """Parse: para cada X em Y, faca ..."""
@@ -754,7 +754,7 @@ class Parser:
         """Parse an expression."""
         token = self.current_token()
         if token and word_of(token) in self._statement_keywords():
-            self.error(f"Unexpected statement keyword '{token.value}' - expression expected")
+            self.error(f"Palavra-chave de comando inesperada '{token.value}' - esperada expressao")
         return self.parse_logical_or()
 
     def parse_logical_or(self) -> Expression:
@@ -962,13 +962,13 @@ class Parser:
         token = self.current_token()
 
         if not token:
-            self.error("Unexpected end of input")
+            self.error("Fim inesperado da entrada")
 
         starters = self._statement_keywords()
         word = word_of(token)
 
         if token.type == TokenType.KEYWORD and word in starters:
-            self.error(f"Unexpected statement keyword '{token.value}' in expression")
+            self.error(f"Palavra-chave de comando inesperada '{token.value}' na expressao")
 
         if token.type == TokenType.NUMBER:
             self.advance()
@@ -989,7 +989,7 @@ class Parser:
 
         if token.type == TokenType.IDENTIFIER:
             if word in starters:
-                self.error(f"Unexpected statement keyword '{token.value}' in expression")
+                self.error(f"Palavra-chave de comando inesperada '{token.value}' na expressao")
             self.advance()
             return Identifier(token.value)
 
@@ -1022,7 +1022,7 @@ class Parser:
             self.expect(TokenType.PUNCTUATION, ")")
             return expr
 
-        self.error(f"Unexpected token in expression: {token.value!r}")
+        self.error(f"Token inesperado na expressao: {token.value!r}")
 
     def parse_list_literal(self) -> Expression:
         """Parse a list literal: [expr1, expr2, ...]"""
