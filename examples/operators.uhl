@@ -1,17 +1,17 @@
-First, let us create a variable called a and set it to 10. Then we will create another variable called b and set it to 5.
+Primeiro, vamos criar uma variavel chamada a e defina ela como 10. Depois vamos criar outra variavel chamada b e defina ela como 5.
 
-Now we can perform some calculations. Let us create a variable called sum and set it to a plus b, which will give us the total of both numbers.
+Agora podemos realizar algumas contas. Vamos criar uma variavel chamada sum e defina ela como a mais b, o que vai dar o total dos dois numeros.
 
-We can also multiply them together, so let us create a variable called product and set it to a times b.
+Tambem podemos multiplicar juntos, entao vamos criar uma variavel chamada product e defina ela como a vezes b.
 
-For subtraction, we will create a variable called difference and set it to a minus b.
+Para subtracao, vamos criar uma variavel chamada difference e defina ela como a menos b.
 
-And for division, let us create a variable called quotient and set it to a divided by b.
+E para divisao, vamos criar uma variavel chamada quotient e defina ela como a dividido por b.
 
-We can also compare values. Let us create a variable called is_greater and set it to a is greater than b, which will tell us if a is larger.
+Tambem podemos comparar valores. Vamos criar uma variavel chamada is_greater e defina ela como a e maior que b, o que diz se a e maior.
 
-Similarly, we can check equality by creating a variable called is_equal and set it to a is equal to b.
+Da mesma forma, podemos verificar igualdade criando uma variavel chamada is_equal e defina ela como a e igual a b.
 
-We can combine operations too. Let us create a variable called result and set it to a plus b times 2, which will calculate the sum first and then multiply by two.
+Podemos combinar operacoes tambem. Vamos criar uma variavel chamada result e defina ela como a mais b vezes 2, o que calcula a soma primeiro e depois multiplica por dois.
 
-Finally, we can use logical operations. Let us create a variable called condition and set it to a is greater than 5 and b is less than 10, which will be true only if both conditions are met.
+Por fim, podemos usar operacoes logicas. Vamos criar uma variavel chamada condition e defina ela como a e maior que 5 e b e menor que 10, o que sera verdadeiro so se ambas as condicoes forem atendidas.
