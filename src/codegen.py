@@ -6,8 +6,11 @@ from src.ast import (
     BinaryOp,
     ForLoop,
     Identifier,
+    IfStatement,
+    InputStatement,
     ListLiteral,
     Literal,
+    PrintStatement,
     Program,
     RepeatLoop,
     UnaryOp,
@@ -104,6 +107,38 @@ class CodeGenerator:
         self.dedent()
 
         return "\n".join(lines)
+
+    def visit_if_statement(self, node: IfStatement) -> str:
+        """Generate code for an if/else statement."""
+        lines = [f"if {self.generate(node.condition)}:"]
+        self.indent()
+        if node.then_body:
+            for stmt in node.then_body:
+                stmt_code = self.generate(stmt)
+                if stmt_code:
+                    lines.append(self.get_indent() + stmt_code)
+        else:
+            lines.append(self.get_indent() + "pass")
+        self.dedent()
+        if node.else_body:
+            lines.append("else:")
+            self.indent()
+            for stmt in node.else_body:
+                stmt_code = self.generate(stmt)
+                if stmt_code:
+                    lines.append(self.get_indent() + stmt_code)
+            self.dedent()
+        return "\n".join(lines)
+
+    def visit_print_statement(self, node: PrintStatement) -> str:
+        """Generate code for a print statement."""
+        return f"print({self.generate(node.expression)})"
+
+    def visit_input_statement(self, node: InputStatement) -> str:
+        """Generate code for a user input statement."""
+        if node.prompt is not None:
+            return f"{node.name} = input({self.generate(node.prompt)})"
+        return f"{node.name} = input()"
 
     def visit_literal(self, node: Literal) -> str:
         """Generate code for a literal."""
