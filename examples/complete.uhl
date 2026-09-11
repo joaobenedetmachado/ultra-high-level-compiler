@@ -1,17 +1,17 @@
-Let us build a program that calculates statistics from a list of numbers. First, we will create a variable called total as an integer and set it to 0, which will hold our running sum.
+Vamos construir um programa que calcula estatisticas a partir de uma lista de numeros. Primeiro, vamos criar uma variavel chamada total como inteiro e defina ela como 0, que vai manter nossa soma acumulada.
 
-Next, we need the numbers to work with, so let us create a variable called numbers as a list and set it to [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]. These are the values we will be processing.
+Depois, precisamos dos numeros para trabalhar, entao vamos criar uma variavel chamada numbers como lista e defina ela como [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]. Esses sao os valores que vamos processar.
 
-Now we will iterate through each number. For each number in numbers, we want to add it to our total, so total becomes total plus number. This will accumulate the sum of all numbers in the list.
+Agora vamos iterar por cada numero. Para cada number em numbers, queremos adicionar ao total, entao total passa a ser total mais number. Isso vai acumular a soma de todos os numeros da lista.
 
-Once we have added up all the numbers, we can calculate the average. Let us create a variable called average and set it to total divided by 10, which gives us the mean value.
+Quando somarmos todos os numeros, podemos calcular a media. Vamos criar uma variavel chamada average e defina ela como total dividido por 10, o que nos da o valor medio.
 
-Now let us set up a counter for another task. We will create a variable called count and set it to 0.
+Agora vamos preparar um contador para outra tarefa. Vamos criar uma variavel chamada count e defina ela como 0.
 
-We will use a while loop to count up. While count is less than 5, we will increment the counter so that count becomes count plus 1. During each iteration, we will also create a variable called message and set it to "Count is". Then we will update it so that message is now message.
+Vamos usar um laco para contar. Enquanto count e menor que 5, vamos incrementar o contador para que count passe a ser count mais 1. Durante cada iteracao, tambem vamos criar uma variavel chamada message e defina ela como "Count is". Depois message agora e message.
 
-After the while loop, we will do something a few times. Let us repeat 3 times, and each time we will create a variable called iteration and set it to "Processing". Then we will update it so that iteration is now iteration.
+Depois do laco, vamos fazer algo algumas vezes. Vamos repita 3 vezes, e cada vez vamos criar uma variavel chamada iteration e defina ela como "Processing". Depois iteration agora e iteration.
 
-We can also check conditions. Let us create a variable called is_done as a boolean and set it to total is greater than 50, which will tell us if we have reached our threshold.
+Tambem podemos checar condicoes. Vamos criar uma variavel chamada is_done como booleano e defina ela como total e maior que 50, o que diz se atingimos o limiar.
 
-Finally, let us calculate a final result. We will create a variable called final_result and set it to average times 2 plus 10, which applies some transformation to our average value.
+Por fim, vamos calcular um resultado final. Vamos criar uma variavel chamada final_result e defina ela como average vezes 2 mais 10, o que aplica uma transformacao ao valor medio.
