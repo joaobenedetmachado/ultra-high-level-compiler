@@ -141,6 +141,22 @@ class Lexer:
         "passe",
         "ser",
         "agora",
+        "mostre",
+        "mostrar",
+        "mostrando",
+        "exiba",
+        "exibir",
+        "exibindo",
+        "escreva",
+        "escrever",
+        "escrevendo",
+        "pergunte",
+        "perguntar",
+        "perguntando",
+        "salve",
+        "salvar",
+        "salvando",
+        "valor",
     }
 
     FOLDED_KEYWORDS = {fold_word(word) for word in KEYWORDS}
@@ -269,17 +285,25 @@ class Lexer:
 
     def check_paragraph_break(self) -> bool:
         """Check if there's a paragraph break (double newline or empty line)."""
-        if self.current_char() == "\n":
-            start_pos = self.pos
-            while self.pos < len(self.text) and self.text[self.pos].isspace():
-                self.advance()
+        if self.current_char() != "\n":
+            return False
 
-            if self.pos >= len(self.text) or self.text[self.pos] == "\n":
-                return True
+        start_pos = self.pos
+        start_line = self.line
+        start_col = self.column
+        newline_count = 0
 
-            self.pos = start_pos
-            self.column = 1
+        while self.pos < len(self.text) and self.text[self.pos].isspace():
+            if self.text[self.pos] == "\n":
+                newline_count += 1
+            self.advance()
 
+        if newline_count >= 2:
+            return True
+
+        self.pos = start_pos
+        self.line = start_line
+        self.column = start_col
         return False
 
     def tokenize(self) -> List[Token]:
