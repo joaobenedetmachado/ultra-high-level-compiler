@@ -157,6 +157,11 @@ class Lexer:
         "salvar",
         "salvando",
         "valor",
+        "funcao",
+        "função",
+        "recebe",
+        "retorna",
+        "retorne",
     }
 
     FOLDED_KEYWORDS = {fold_word(word) for word in KEYWORDS}
