@@ -1,9 +1,9 @@
-Let me start by create a variable called x and set it to 5. This will be our starting point.
+Vamos comecar. Crie uma variavel chamada x e defina ela como 5. Esse vai ser o nosso ponto de partida.
 
-Now I want to create a variable called name as a string and set it to "Hello, World!" so we can greet the user properly.
+Agora quero criar uma variavel chamada name como texto e defina ela como "Hello, World!" para cumprimentar o usuario.
 
-We also need to track whether something is active, so let us create a variable called is_active as a boolean and set it to true.
+Tambem precisamos saber se algo esta ativo, entao vamos criar uma variavel chamada is_active como booleano e defina ela como verdadeiro.
 
-Later on, we will need to update x, so let us make x become 10.
+Mais tarde vamos atualizar x, entao x passa a ser 10.
 
-And finally, let us update the name so that name is now "Python".
+E por fim, vamos atualizar o nome para que name agora e "Python".
