@@ -9,7 +9,8 @@ UHL e uma **linguagem de programacao de altissimo nivel** que permite escrever c
 - **Sintaxe em linguagem natural**: escreva codigo em frases e paragrafos em portugues
 - **Variaveis com tipo opcional**: `inteiro`, `texto`, `numero`, `booleano`, `lista`
 - **Lacos intuitivos**: `para cada`, `enquanto` e `repita`
-- **Condicionais**: `se` / `entao` / `senao`
+- **Condicionais**: `se` / `entao` / `senao` / `senao se`
+- **Funcoes**: `defina uma funcao chamada` com `recebe` e `retorna`
 - **Entrada e saida**: `mostre`, `exiba`, `escreva` e `pergunte`
 - **Operadores em portugues**: `mais`, `menos`, `vezes`, `dividido por`, `maior que`
 - **Estrutura por paragrafos**: organize o codigo como texto corrido
@@ -134,8 +135,21 @@ repita <n> vezes faca
 ```
 se <condicao> entao
     <comandos>
+senao se <condicao> entao
+    <comandos>
 senao
     <comandos>
+```
+
+### Funcoes
+
+```
+defina uma funcao chamada <nome> que recebe <a> e <b> e retorna <expressao>
+defina uma funcao chamada <nome> que recebe <a>
+    <comandos>
+    retorna <expressao>
+
+<nome>(<args>)
 ```
 
 ### Entrada e saida
@@ -157,7 +171,9 @@ pergunte "mensagem" e salve em <nome>
 | `vezes` | `*` | `a vezes b` |
 | `dividido por` | `/` | `a dividido por b` |
 | `maior que` | `>` | `a e maior que b` |
+| `maior ou igual a` | `>=` | `a e maior ou igual a b` |
 | `menor que` | `<` | `a e menor que b` |
+| `menor ou igual a` | `<=` | `a e menor ou igual a b` |
 | `igual a` | `==` | `a e igual a b` |
 | `diferente de` | `!=` | `a e diferente de b` |
 | `e` | `and` | `a e maior que 5 e b e menor que 10` |
@@ -214,7 +230,9 @@ print(codigo)
 │   ├── operators.uhl
 │   ├── complete.uhl
 │   ├── condicionais.uhl
-│   └── entrada_saida.uhl
+│   ├── entrada_saida.uhl
+│   ├── senao_se.uhl
+│   └── funcoes.uhl
 ├── tests/
 │   └── test_examples.py
 ├── cli.py
