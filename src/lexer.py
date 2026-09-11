@@ -156,7 +156,7 @@ class Lexer:
 
     def error(self, message: str):
         """Raise a lexer error with position information."""
-        raise SyntaxError(f"Lexer error at line {self.line}, column {self.column}: {message}")
+        raise SyntaxError(f"Erro do lexer na linha {self.line}, coluna {self.column}: {message}")
 
     def current_char(self) -> Optional[str]:
         """Get the current character."""
@@ -232,7 +232,7 @@ class Lexer:
                 result.append(char)
                 self.advance()
         else:
-            self.error("Unterminated string literal")
+            self.error("Literal de string sem fechamento")
 
         return "".join(result)
 
@@ -334,7 +334,7 @@ class Lexer:
                 self.advance()
                 continue
 
-            self.error(f"Unexpected character: {char!r}")
+            self.error(f"Caractere inesperado: {char!r}")
 
         self.tokens.append(Token(TokenType.EOF, "", self.line, self.column))
 
