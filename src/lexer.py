@@ -35,63 +35,116 @@ class Token:
         return self.type == other.type and self.value == other.value
 
 
+_ACCENT_TABLE = str.maketrans(
+    {
+        "á": "a",
+        "à": "a",
+        "ã": "a",
+        "â": "a",
+        "é": "e",
+        "ê": "e",
+        "í": "i",
+        "ó": "o",
+        "ô": "o",
+        "õ": "o",
+        "ú": "u",
+        "ç": "c",
+    }
+)
+
+
+def fold_word(word: str) -> str:
+    """Lowercase a word and fold accents, keeping é distinct from e."""
+    if not word:
+        return ""
+    lowered = word.lower()
+    if lowered == "é":
+        return "eh"
+    return lowered.translate(_ACCENT_TABLE)
+
+
 class Lexer:
     """Tokenizes natural language input into tokens."""
 
     KEYWORDS = {
+        "crie",
+        "criar",
+        "criando",
         "declare",
-        "variable",
-        "named",
-        "set",
-        "it",
-        "to",
-        "and",
-        "or",
-        "not",
-        "for",
-        "each",
-        "in",
-        "do",
-        "while",
-        "is",
-        "true",
-        "false",
-        "repeat",
-        "times",
-        "if",
-        "then",
-        "else",
-        "add",
-        "subtract",
-        "multiply",
-        "divide",
-        "greater",
-        "than",
-        "less",
-        "equal",
-        "equals",
-        "the",
+        "declarar",
+        "declarando",
+        "uma",
+        "um",
+        "o",
         "a",
-        "an",
-        "of",
+        "os",
         "as",
-        "type",
-        "integer",
-        "string",
-        "number",
-        "boolean",
-        "list",
-        "plus",
-        "minus",
-        "divided",
-        "become",
-        "becomes",
-        "called",
-        "create",
-        "now",
+        "variavel",
+        "variável",
+        "chamada",
+        "chamado",
+        "nomeada",
+        "nomeado",
+        "defina",
+        "definir",
+        "definindo",
+        "ela",
+        "ele",
+        "como",
+        "e",
+        "ou",
+        "nao",
+        "não",
+        "para",
+        "cada",
+        "em",
+        "faca",
+        "faça",
+        "enquanto",
+        "eh",
+        "é",
+        "verdadeiro",
+        "verdadeira",
+        "falso",
+        "falsa",
+        "repita",
+        "repetir",
+        "repetindo",
+        "vezes",
+        "se",
+        "entao",
+        "então",
+        "senao",
+        "senão",
+        "mais",
+        "menos",
+        "dividido",
+        "por",
+        "maior",
+        "que",
+        "menor",
+        "igual",
+        "diferente",
+        "de",
+        "do",
+        "da",
+        "dos",
+        "das",
+        "tipo",
+        "inteiro",
+        "texto",
+        "numero",
+        "número",
+        "booleano",
+        "lista",
+        "passa",
+        "ser",
+        "agora",
     }
 
-    OPERATORS = {"+", "-", "*", "/", "==", "!=", "<=", ">=", "<", ">", "and", "or", "not"}
+    FOLDED_KEYWORDS = {fold_word(word) for word in KEYWORDS}
+
+    OPERATORS = {"+", "-", "*", "/", "==", "!=", "<=", ">=", "<", ">", "e", "ou", "nao"}
 
     def __init__(self, text: str):
         self.text = text
@@ -262,10 +315,9 @@ class Lexer:
 
             if char.isalpha() or char == "_":
                 value = self.read_identifier_or_keyword()
-                if value.lower() in self.KEYWORDS:
-                    self.tokens.append(
-                        Token(TokenType.KEYWORD, value.lower(), start_line, start_col)
-                    )
+                folded = fold_word(value)
+                if folded in self.FOLDED_KEYWORDS:
+                    self.tokens.append(Token(TokenType.KEYWORD, folded, start_line, start_col))
                 else:
                     self.tokens.append(Token(TokenType.IDENTIFIER, value, start_line, start_col))
                 continue
