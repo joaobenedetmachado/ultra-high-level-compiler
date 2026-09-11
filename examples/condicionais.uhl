@@ -1,0 +1,9 @@
+Crie uma variavel chamada x e defina ela como 8.
+
+Se x e maior que 3 entao
+    mostre "x e grande"
+senao
+    mostre "x e pequeno"
+
+Se x e igual a 8 entao
+    mostre "acertou"
