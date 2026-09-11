@@ -1,0 +1,10 @@
+Crie uma variavel chamada saudacao e defina ela como "Ola".
+mostre saudacao
+exiba "Bem-vindo"
+escreva o valor de saudacao
+
+pergunte "Qual seu nome?" e salve em nome
+mostre nome
+
+pergunte e salve em idade
+mostre idade
