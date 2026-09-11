@@ -1,13 +1,13 @@
-Let us start by create a variable called numbers and set it to [1, 2, 3, 4, 5]. This list contains the numbers we want to work with.
+Vamos comecar. Crie uma variavel chamada numbers e defina ela como [1, 2, 3, 4, 5]. Essa lista contem os numeros com os quais queremos trabalhar.
 
-Now, for each number in numbers do
-    Let us create a variable called squared and set it to number times number, which will calculate the square of each number. Then we will update squared so that squared becomes squared plus 1, adding one to the result.
+Agora, para cada number em numbers faca
+    Vamos criar uma variavel chamada squared e defina ela como number vezes number, o que vai calcular o quadrado de cada numero. Depois squared passa a ser squared mais 1, somando um ao resultado.
 
-After processing all the numbers, we need to set up a counter. Let us create a variable called counter and set it to 0.
+Depois de processar todos os numeros, precisamos de um contador. Vamos criar uma variavel chamada counter e defina ela como 0.
 
-Now we will use a while loop. While counter is less than 10 do
-    counter becomes counter plus 1 each time through the loop.
+Agora vamos usar um laco. Enquanto counter e menor que 10 faca
+    counter passa a ser counter mais 1 a cada vez no laco.
 
-Finally, repeat 5 times do
-    create a variable called message and set it to "Iteration"
-    message is now message
+Por fim, repita 5 vezes faca
+    crie uma variavel chamada message e defina ela como "Iteration"
+    message agora e message
