@@ -8,8 +8,11 @@ from src.ast import (
     Expression,
     ForLoop,
     Identifier,
+    IfStatement,
+    InputStatement,
     ListLiteral,
     Literal,
+    PrintStatement,
     Program,
     RepeatLoop,
     Statement,
@@ -24,6 +27,19 @@ CREATE_VERBS = {"crie", "criar", "criando"}
 DECLARE_VERBS = {"declare", "declarar", "declarando"}
 DEFINE_VERBS = {"defina", "definir", "definindo"}
 REPEAT_VERBS = {"repita", "repetir", "repetindo"}
+PRINT_VERBS = {
+    "mostre",
+    "mostrar",
+    "mostrando",
+    "exiba",
+    "exibir",
+    "exibindo",
+    "escreva",
+    "escrever",
+    "escrevendo",
+}
+INPUT_VERBS = {"pergunte", "perguntar", "perguntando"}
+SAVE_VERBS = {"salve", "salvar", "salvando"}
 TYPE_NAMES = {"inteiro", "texto", "numero", "booleano", "lista"}
 IS_WORDS = {"eh"}
 BOOL_TRUE = {"verdadeiro", "verdadeira"}
@@ -144,6 +160,18 @@ class Parser:
             "repetindo",
             "se",
             "senao",
+            "mostre",
+            "mostrar",
+            "mostrando",
+            "exiba",
+            "exibir",
+            "exibindo",
+            "escreva",
+            "escrever",
+            "escrevendo",
+            "pergunte",
+            "perguntar",
+            "perguntando",
         }
         statement_keywords = {
             "variavel",
@@ -407,13 +435,11 @@ class Parser:
                 continue
 
             if word == "se":
-                prev = word_of(self.tokens[self.pos - 1]) if self.pos > 0 else ""
-                peek = self.peek_word()
-                if prev in {"saber", "verificar", "checar"} or peek in {"algo", "o", "a", "uma"}:
-                    self.advance()
-                    skipped_any = True
-                    continue
-                break
+                if self._looks_like_if():
+                    break
+                self.advance()
+                skipped_any = True
+                continue
 
             if word == "enquanto":
                 peek = self.peek_word()
@@ -562,6 +588,18 @@ class Parser:
         if token_value in REPEAT_VERBS:
             return self.parse_repeat_loop()
 
+        if token_value == "se" and self._looks_like_if():
+            return self.parse_if_statement()
+
+        if token_value == "senao":
+            return None
+
+        if token_value in PRINT_VERBS:
+            return self.parse_print_statement()
+
+        if token_value in INPUT_VERBS:
+            return self.parse_input_statement()
+
         if token.type == TokenType.IDENTIFIER:
             peek = self.peek_word()
             if peek in {"passa", "passe"}:
@@ -705,7 +743,89 @@ class Parser:
         body = self.parse_block()
         return RepeatLoop(count, body)
 
-    def parse_block(self, stop_keywords: Optional[Set[str]] = None) -> List[Statement]:
+    def _looks_like_if(self) -> bool:
+        """A 'se' is a conditional only when 'entao' starts a real branch."""
+        for offset in range(1, 24):
+            token = self.peek_token(offset)
+            if token is None or token.type in (TokenType.EOF, TokenType.PARAGRAPH_BREAK):
+                return False
+            word = word_of(token)
+            if word == "entao":
+                following = word_of(self.peek_token(offset + 1))
+                if following in {
+                    "vamos",
+                    "vou",
+                    "crie",
+                    "criar",
+                    "declare",
+                    "declarar",
+                    "defina",
+                    "definir",
+                    "preciso",
+                    "queremos",
+                    "quero",
+                }:
+                    return False
+                return True
+            if word in {
+                "crie",
+                "criar",
+                "declare",
+                "defina",
+                "para",
+                "enquanto",
+                "repita",
+                "senao",
+                "mostre",
+                "exiba",
+                "escreva",
+                "pergunte",
+            }:
+                return False
+        return False
+
+    def parse_if_statement(self) -> IfStatement:
+        """Parse: se CONDICAO entao ... senao ..."""
+        self.expect(TokenType.KEYWORD, "se")
+        condition = self.parse_expression()
+        self.skip_optional(TokenType.PUNCTUATION, ",")
+        self.skip_optional_word("entao")
+        then_body = self.parse_block(stop_keywords={"senao"})
+        else_body: List[Statement] = []
+        if self.current_word() == "senao":
+            self.advance()
+            else_body = self.parse_block(stop_at_paragraph=True)
+        return IfStatement(condition, then_body, else_body)
+
+    def parse_print_statement(self) -> PrintStatement:
+        """Parse: mostre / exiba / escreva EXPR."""
+        if not self.skip_any_word(PRINT_VERBS):
+            self.error("Esperado 'mostre', 'exiba' ou 'escreva'")
+        self.skip_optional_word("o")
+        if self.skip_optional_word("valor"):
+            self.skip_optional_word("de")
+        expression = self.parse_expression()
+        return PrintStatement(expression)
+
+    def parse_input_statement(self) -> InputStatement:
+        """Parse: pergunte [PROMPT] e salve em NOME."""
+        if not self.skip_any_word(INPUT_VERBS):
+            self.error("Esperado 'pergunte'")
+        prompt = None
+        token = self.current_token()
+        if token and token.type == TokenType.STRING:
+            prompt = Literal(token.value)
+            self.advance()
+        self.skip_optional_word("e")
+        if not self.skip_any_word(SAVE_VERBS):
+            self.error("Esperado 'salve' depois de 'pergunte'")
+        self.skip_optional_word("em")
+        name = self.parse_name()
+        return InputStatement(name, prompt)
+
+    def parse_block(
+        self, stop_keywords: Optional[Set[str]] = None, stop_at_paragraph: bool = False
+    ) -> List[Statement]:
         """Parse a block of statements."""
         stop = set(stop_keywords or [])
         body = []
@@ -726,7 +846,16 @@ class Parser:
             elif self.pos == saved_pos:
                 break
 
-            self.skip_paragraph_breaks()
+            if stop_at_paragraph:
+                nxt = self.current_token()
+                if (
+                    nxt is None
+                    or nxt.type == TokenType.EOF
+                    or nxt.type == TokenType.PARAGRAPH_BREAK
+                ):
+                    break
+            else:
+                self.skip_paragraph_breaks()
 
         return body
 
@@ -748,6 +877,14 @@ class Parser:
             "entao",
             "senao",
             "cada",
+            "mostre",
+            "mostrar",
+            "exiba",
+            "exibir",
+            "escreva",
+            "escrever",
+            "pergunte",
+            "perguntar",
         }
 
     def parse_expression(self) -> Expression:
