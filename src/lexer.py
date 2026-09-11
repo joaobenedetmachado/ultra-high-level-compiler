@@ -138,6 +138,7 @@ class Lexer:
         "booleano",
         "lista",
         "passa",
+        "passe",
         "ser",
         "agora",
     }
