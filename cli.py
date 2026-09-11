@@ -11,20 +11,20 @@ from src.compiler import Compiler
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Compile ultra high-level language to Python",
+        description="Compila linguagem ultra de alto nivel para Python",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  %(prog)s input.uhl -o output.py
-  %(prog)s input.uhl                    # Output to stdout
-  echo "declare a variable named x and set it to 5" | %(prog)s -  # Read from stdin
+Exemplos:
+  %(prog)s entrada.uhl -o saida.py
+  %(prog)s entrada.uhl                    # Imprime no stdout
+  echo "crie uma variavel chamada x e defina ela como 5" | %(prog)s -
         """,
     )
 
-    parser.add_argument("input", type=str, help='Input file (use "-" for stdin)')
+    parser.add_argument("input", type=str, help='Arquivo de entrada (use "-" para stdin)')
 
     parser.add_argument(
-        "-o", "--output", type=str, default=None, help="Output file (default: stdout)"
+        "-o", "--output", type=str, default=None, help="Arquivo de saida (padrao: stdout)"
     )
 
     parser.add_argument("--version", action="version", version="%(prog)s 1.0.0")
@@ -36,7 +36,7 @@ Examples:
     else:
         input_path = Path(args.input)
         if not input_path.exists():
-            print(f"Error: Input file '{args.input}' not found", file=sys.stderr)
+            print(f"Erro: arquivo de entrada '{args.input}' nao encontrado", file=sys.stderr)
             sys.exit(1)
 
         with open(input_path, encoding="utf-8") as f:
@@ -46,17 +46,17 @@ Examples:
     try:
         python_code = compiler.compile(source_code)
     except SyntaxError as e:
-        print(f"Syntax Error: {e}", file=sys.stderr)
+        print(f"Erro de sintaxe: {e}", file=sys.stderr)
         sys.exit(1)
     except (ValueError, TypeError, AttributeError) as e:
-        print(f"Compilation Error: {e}", file=sys.stderr)
+        print(f"Erro de compilacao: {e}", file=sys.stderr)
         sys.exit(1)
 
     if args.output:
         output_path = Path(args.output)
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(python_code)
-        print(f"Compiled successfully: {args.input} -> {args.output}", file=sys.stderr)
+        print(f"Compilado com sucesso: {args.input} -> {args.output}", file=sys.stderr)
     else:
         print(python_code)
 
