@@ -5,8 +5,10 @@ from typing import List, Optional, Set
 from src.ast import (
     Assignment,
     BinaryOp,
+    Call,
     Expression,
     ForLoop,
+    FunctionDef,
     Identifier,
     IfStatement,
     InputStatement,
@@ -15,6 +17,7 @@ from src.ast import (
     PrintStatement,
     Program,
     RepeatLoop,
+    ReturnStatement,
     Statement,
     UnaryOp,
     VariableDeclaration,
@@ -40,6 +43,7 @@ PRINT_VERBS = {
 }
 INPUT_VERBS = {"pergunte", "perguntar", "perguntando"}
 SAVE_VERBS = {"salve", "salvar", "salvando"}
+RETURN_VERBS = {"retorna", "retorne"}
 TYPE_NAMES = {"inteiro", "texto", "numero", "booleano", "lista"}
 IS_WORDS = {"eh"}
 BOOL_TRUE = {"verdadeiro", "verdadeira"}
@@ -172,6 +176,8 @@ class Parser:
             "pergunte",
             "perguntar",
             "perguntando",
+            "retorna",
+            "retorne",
         }
         statement_keywords = {
             "variavel",
@@ -577,7 +583,14 @@ class Parser:
             return self.parse_variable_declaration()
 
         if token_value in DEFINE_VERBS:
+            peek = self.peek_word()
+            peek2 = word_of(self.peek_token(2))
+            if peek == "funcao" or (peek in {"uma", "um"} and peek2 == "funcao"):
+                return self.parse_function_def()
             return self.parse_assignment()
+
+        if token_value in RETURN_VERBS:
+            return self.parse_return_statement()
 
         if token_value == "para" and self.peek_word() == "cada":
             return self.parse_for_loop()
@@ -794,7 +807,10 @@ class Parser:
         else_body: List[Statement] = []
         if self.current_word() == "senao":
             self.advance()
-            else_body = self.parse_block(stop_at_paragraph=True)
+            if self.current_word() == "se" and self._looks_like_if():
+                else_body = [self.parse_if_statement()]
+            else:
+                else_body = self.parse_block(stop_at_paragraph=True)
         return IfStatement(condition, then_body, else_body)
 
     def parse_print_statement(self) -> PrintStatement:
@@ -822,6 +838,47 @@ class Parser:
         self.skip_optional_word("em")
         name = self.parse_name()
         return InputStatement(name, prompt)
+
+    def parse_function_def(self) -> FunctionDef:
+        """Parse: defina uma funcao chamada NOME que recebe A e B e retorna EXPR."""
+        self.skip_any_word(DEFINE_VERBS)
+        self.skip_any_word({"uma", "um"})
+        if not self.skip_optional_word("funcao"):
+            self.error("Esperado 'funcao'")
+        self.skip_any_word({"chamada", "chamado"})
+        name = self.parse_name()
+        self.skip_optional_word("que")
+
+        params: List[str] = []
+        if self.skip_optional_word("recebe"):
+            params.append(self.parse_name())
+            while self.current_word() == "e" and self.peek_word() not in RETURN_VERBS:
+                self.advance()
+                if self.current_word() in RETURN_VERBS:
+                    break
+                params.append(self.parse_name())
+
+        if self.skip_optional_word("e"):
+            pass
+        if self.skip_any_word(RETURN_VERBS):
+            value = self.parse_expression()
+            return FunctionDef(name, params, [ReturnStatement(value)])
+
+        body = self.parse_block(stop_at_paragraph=True)
+        return FunctionDef(name, params, body)
+
+    def parse_return_statement(self) -> ReturnStatement:
+        """Parse: retorna EXPR."""
+        if not self.skip_any_word(RETURN_VERBS):
+            self.error("Esperado 'retorna'")
+        token = self.current_token()
+        if (
+            token is None
+            or token.type in (TokenType.EOF, TokenType.PARAGRAPH_BREAK)
+            or word_of(token) in self._statement_keywords()
+        ):
+            return ReturnStatement(None)
+        return ReturnStatement(self.parse_expression())
 
     def parse_block(
         self, stop_keywords: Optional[Set[str]] = None, stop_at_paragraph: bool = False
@@ -885,6 +942,9 @@ class Parser:
             "escrever",
             "pergunte",
             "perguntar",
+            "retorna",
+            "retorne",
+            "funcao",
         }
 
     def parse_expression(self) -> Expression:
@@ -971,15 +1031,25 @@ class Parser:
 
                 if word == "maior":
                     self.advance()
-                    self.skip_optional_word("que")
-                    right = self.parse_additive()
-                    left = BinaryOp(left, ">", right)
+                    if self.skip_optional_word("ou") and self.skip_optional_word("igual"):
+                        self.skip_any_word({"a", "que"})
+                        right = self.parse_additive()
+                        left = BinaryOp(left, ">=", right)
+                    else:
+                        self.skip_optional_word("que")
+                        right = self.parse_additive()
+                        left = BinaryOp(left, ">", right)
                     continue
                 if word == "menor":
                     self.advance()
-                    self.skip_optional_word("que")
-                    right = self.parse_additive()
-                    left = BinaryOp(left, "<", right)
+                    if self.skip_optional_word("ou") and self.skip_optional_word("igual"):
+                        self.skip_any_word({"a", "que"})
+                        right = self.parse_additive()
+                        left = BinaryOp(left, "<=", right)
+                    else:
+                        self.skip_optional_word("que")
+                        right = self.parse_additive()
+                        left = BinaryOp(left, "<", right)
                     continue
                 if word == "igual":
                     self.advance()
@@ -1127,8 +1197,11 @@ class Parser:
         if token.type == TokenType.IDENTIFIER:
             if word in starters:
                 self.error(f"Palavra-chave de comando inesperada '{token.value}' na expressao")
+            name = token.value
             self.advance()
-            return Identifier(token.value)
+            if self.current_token() and self.current_token().value == "(":
+                return self.parse_call(name)
+            return Identifier(name)
 
         if token.type == TokenType.KEYWORD:
             if word not in starters | {
@@ -1147,8 +1220,11 @@ class Parser:
                 "passe",
                 "agora",
             }:
+                name = token.value
                 self.advance()
-                return Identifier(token.value)
+                if self.current_token() and self.current_token().value == "(":
+                    return self.parse_call(name)
+                return Identifier(name)
 
         if token.type == TokenType.PUNCTUATION and token.value == "[":
             return self.parse_list_literal()
@@ -1160,6 +1236,18 @@ class Parser:
             return expr
 
         self.error(f"Token inesperado na expressao: {token.value!r}")
+
+    def parse_call(self, name: str) -> Call:
+        """Parse: nome(arg1, arg2)."""
+        self.expect(TokenType.PUNCTUATION, "(")
+        args: List[Expression] = []
+        if not (self.current_token() and self.current_token().value == ")"):
+            args.append(self.parse_expression())
+            while self.current_token() and self.current_token().value == ",":
+                self.advance()
+                args.append(self.parse_expression())
+        self.expect(TokenType.PUNCTUATION, ")")
+        return Call(name, args)
 
     def parse_list_literal(self) -> Expression:
         """Parse a list literal: [expr1, expr2, ...]"""
