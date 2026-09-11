@@ -1,0 +1,8 @@
+Crie uma variavel chamada nota e defina ela como 7.
+
+Se nota e maior ou igual a 7 entao
+    mostre "aprovado"
+senao se nota e maior ou igual a 5 entao
+    mostre "recuperacao"
+senao
+    mostre "reprovado"
