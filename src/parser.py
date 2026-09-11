@@ -1,6 +1,6 @@
 """Parser for natural language constructs."""
 
-from typing import List, Optional
+from typing import List, Optional, Set
 
 from src.ast import (
     Assignment,
@@ -17,7 +17,24 @@ from src.ast import (
     VariableDeclaration,
     WhileLoop,
 )
-from src.lexer import Token, TokenType
+from src.lexer import Token, TokenType, fold_word
+
+
+CREATE_VERBS = {"crie", "criar", "criando"}
+DECLARE_VERBS = {"declare", "declarar", "declarando"}
+DEFINE_VERBS = {"defina", "definir", "definindo"}
+REPEAT_VERBS = {"repita", "repetir", "repetindo"}
+TYPE_NAMES = {"inteiro", "texto", "numero", "booleano", "lista"}
+IS_WORDS = {"eh"}
+BOOL_TRUE = {"verdadeiro", "verdadeira"}
+BOOL_FALSE = {"falso", "falsa"}
+
+
+def word_of(token: Optional[Token]) -> str:
+    """Return the folded form of a token value."""
+    if token is None or not token.value:
+        return ""
+    return fold_word(token.value)
 
 
 class Parser:
@@ -50,6 +67,14 @@ class Parser:
             return None
         return self.tokens[pos]
 
+    def current_word(self) -> str:
+        """Folded value of the current token."""
+        return word_of(self.current_token())
+
+    def peek_word(self, offset: int = 1) -> str:
+        """Folded value of a token ahead."""
+        return word_of(self.peek_token(offset))
+
     def advance(self):
         """Move to the next token."""
         if self.pos < len(self.tokens):
@@ -61,7 +86,7 @@ class Parser:
         if token is None or token.type != token_type:
             expected = f"{token_type.name}" + (f" with value {value!r}" if value else "")
             self.error(f"Expected {expected}, got {token.type.name if token else 'EOF'}")
-        if value is not None and token.value.lower() != value.lower():
+        if value is not None and word_of(token) != fold_word(value):
             self.error(f"Expected {value!r}, got {token.value!r}")
         self.advance()
         return token
@@ -70,16 +95,27 @@ class Parser:
         """Skip a token if it matches, otherwise do nothing."""
         token = self.current_token()
         if token and token.type == token_type:
-            if value is None or token.value.lower() == value.lower():
+            if value is None or word_of(token) == fold_word(value):
                 self.advance()
                 return True
         return False
 
-    def skip_optional_keyword_or_identifier(self, value: str):
-        """Skip a token if it matches the value, whether it's a keyword or identifier."""
+    def skip_optional_word(self, value: str):
+        """Skip a keyword or identifier that matches the folded value."""
         token = self.current_token()
-        if token and token.value.lower() == value.lower():
+        if token and word_of(token) == fold_word(value):
             if token.type in (TokenType.KEYWORD, TokenType.IDENTIFIER):
+                self.advance()
+                return True
+        return False
+
+    def skip_any_word(self, values: Set[str]) -> bool:
+        """Skip the current word if it is in the given folded set."""
+        if self.current_word() in values:
+            if self.current_token() and self.current_token().type in (
+                TokenType.KEYWORD,
+                TokenType.IDENTIFIER,
+            ):
                 self.advance()
                 return True
         return False
@@ -91,209 +127,261 @@ class Parser:
 
     def skip_narrative_words(self):
         """Skip common narrative/introductory words that don't affect meaning."""
-        # Keywords that start actual statements
-        statement_starters = {"declare", "create", "set", "for", "while", "repeat", "if", "else"}
-        # Keywords that are part of statements (should not be skipped)
-        # Note: "now", "to", "is", "and", and "each" are not included here because they can be narrative (handled separately)
+        statement_starters = {
+            "crie",
+            "criar",
+            "criando",
+            "declare",
+            "declarar",
+            "declarando",
+            "defina",
+            "definir",
+            "definindo",
+            "para",
+            "enquanto",
+            "repita",
+            "repetir",
+            "repetindo",
+            "se",
+            "senao",
+        }
         statement_keywords = {
-            "variable",
-            "named",
-            "called",
-            "as",
-            "it",
-            "or",
-            "not",
-            "in",
-            "do",
-            "true",
-            "false",
-            "times",
-            "equals",
-            "becomes",
-            "become",
-            "plus",
-            "minus",
-            "divided",
-            "greater",
-            "than",
-            "less",
-            "equal",
+            "variavel",
+            "chamada",
+            "chamado",
+            "nomeada",
+            "nomeado",
+            "como",
+            "ela",
+            "ele",
+            "ou",
+            "nao",
+            "em",
+            "faca",
+            "verdadeiro",
+            "verdadeira",
+            "falso",
+            "falsa",
+            "vezes",
+            "passa",
+            "passe",
+            "mais",
+            "menos",
+            "dividido",
+            "maior",
+            "menor",
+            "igual",
+            "diferente",
         }
 
         base_narrative_words = {
-            "let",
+            "vamos",
+            "vou",
+            "ir",
+            "deixar",
+            "deixe",
+            "comecar",
+            "comece",
+            "comecando",
+            "iniciar",
+            "inicie",
+            "agora",
+            "primeiro",
+            "depois",
+            "entao",
+            "tambem",
+            "assim",
+            "precisamos",
+            "preciso",
+            "queremos",
+            "quero",
+            "precisa",
+            "por",
+            "fim",
             "me",
-            "start",
-            "by",
-            "now",
-            "first",
-            "then",
-            "next",
-            "also",
-            "we",
-            "want",
-            "need",
-            "will",
-            "can",
-            "should",
-            "shall",
-            "must",
-            "after",
-            "before",
-            "during",
-            "finally",
-            "later",
-            "on",
-            "once",
-            "this",
-            "that",
-            "these",
-            "those",
+            "eu",
+            "nos",
+            "este",
+            "esta",
+            "esse",
+            "essa",
+            "isto",
+            "isso",
+            "aquele",
+            "aquela",
+            "quando",
+            "onde",
+            "qual",
+            "quais",
+            "algum",
+            "alguma",
+            "todo",
+            "toda",
+            "todos",
+            "todas",
+            "nosso",
+            "nossa",
+            "meu",
+            "minha",
+            "seu",
+            "sua",
+            "fazer",
+            "faz",
+            "feito",
+            "fazendo",
+            "coisa",
+            "coisas",
+            "ponto",
+            "aqui",
+            "ali",
+            "la",
+            "calcular",
+            "calcula",
+            "resultado",
+            "usar",
+            "usamos",
+            "usando",
+            "com",
+            "sem",
+            "ja",
+            "ainda",
+            "bem",
             "so",
-            "which",
-            "who",
-            "what",
-            "when",
-            "where",
-            "why",
-            "how",
-            "whether",
-            "some",
-            "any",
-            "every",
-            "all",
-            "both",
-            "either",
-            "neither",
-            "another",
-            "other",
-            "such",
-            "same",
-            "different",
-            "new",
-            "old",
-            "last",
-            "be",
-            "our",
-            "their",
-            "my",
-            "your",
-            "his",
-            "her",
-            "its",
-            "us",
-            "them",
-            "they",
-            "he",
-            "she",
-            "it",
-            "i",
-            "make",
-            "makes",
-            "made",
-            "point",
-            "way",
-            "thing",
-            "things",
-            "one",
-            "ones",
-            "here",
-            "there",
-            "up",
-            "down",
-            "out",
-            "in",
-            "off",
-            "over",
-            "under",
-            "through",
-            "the",
-            "track",
-            "something",
-            "active",
-            "greet",
-            "user",
-            "properly",
-            "update",
-            "and",
-            "list",
-            "contains",
-            "numbers",
-            "work",
-            "with",
-            "do",
-            "of",
-            "each",
-            "calculate",
-            "square",
-            "adding",
-            "result",
-            "processing",
-            "set",
-            "counter",
-            "increment",
-            "time",
+            "ate",
+            "cumprimentar",
+            "usuario",
+            "ativo",
+            "saber",
+            "algo",
+            "tarde",
+            "atualizar",
+            "nome",
+            "partida",
+            "vai",
+            "trabalhar",
+            "trabalhamos",
+            "numeros",
+            "processar",
+            "processando",
+            "contador",
             "loop",
-            "specific",
-            "times",
-            "iteration",
-            "change",
-            "demonstrates",
-            "assignment",
-            "number",
-            "variable",
-            "called",
-            "perform",
-            "calculations",
-            "multiply",
-            "together",
-            "subtraction",
-            "division",
-            "compare",
-            "values",
-            "larger",
-            "similarly",
-            "check",
-            "equality",
-            "combine",
-            "operations",
-            "logical",
-            "met",
-            "build",
-            "program",
-            "calculates",
-            "statistics",
-            "from",
-            "hold",
-            "running",
-            "sum",
-            "iterate",
-            "accumulate",
-            "added",
-            "add",
-            "average",
-            "mean",
-            "value",
-            "task",
-            "count",
-            "conditions",
-            "reached",
-            "threshold",
-            "transformation",
-            "use",
+            "laco",
+            "atraves",
+            "acumular",
+            "soma",
+            "media",
+            "valor",
+            "tarefa",
+            "incrementar",
+            "durante",
+            "iteracao",
+            "alcancamos",
+            "limite",
+            "final",
+            "aplica",
+            "transformacao",
+            "realizar",
+            "contas",
+            "juntos",
+            "subtracao",
+            "divisao",
+            "comparar",
+            "valores",
+            "verificar",
+            "igualdade",
+            "combinar",
+            "operacoes",
+            "logicas",
+            "ambas",
+            "condicoes",
+            "atendidas",
+            "construir",
+            "programa",
+            "calcula",
+            "estatisticas",
+            "partir",
+            "manter",
+            "acumulada",
+            "iterar",
+            "adicionar",
+            "contar",
+            "vez",
+            "checar",
+            "atingimos",
+            "limiar",
+            "lista",
+            "contem",
+            "queremos",
+            "outro",
+            "outra",
+            "pode",
+            "podemos",
+            "dar",
+            "total",
+            "ambos",
+            "numeros",
+            "sera",
+            "sao",
+            "foi",
+            "sendo",
+            "tendo",
+            "tendo",
+            "entao",
+            "logo",
+            "enfim",
+            "finalmente",
+            "mais",
+            "tarde",
+            "preciso",
+            "rastrear",
+            "se",
+            "esteja",
+            "propriamente",
+            "cumprimentar",
+            "usuario",
+            "atualizar",
+            "ficando",
+            "fica",
+            "desse",
+            "dessa",
+            "disso",
+            "daquilo",
+            "apenas",
+            "somente",
+            "realmente",
+            "basicamente",
+            "entao",
+            "portanto",
+            "pois",
+            "porque",
+            "quando",
+            "enquanto",
+            "antes",
+            "apos",
+            "depois",
+            "durante",
+            "uma",
+            "um",
+            "o",
+            "os",
+            "as",
+            "de",
+            "do",
+            "da",
+            "dos",
+            "das",
+            "que",
+            "ser",
+            "eh",
         }
 
         def is_narrative_word(word):
-            """Check if a word is a narrative word, including verb forms."""
-            word_lower = word.lower()
-            if word_lower in base_narrative_words:
+            if word in base_narrative_words:
                 return True
-            # Don't skip exact statement starters - they're needed for matching
-            if word_lower in statement_starters:
+            if word in statement_starters:
                 return False
-            # Check verb forms of narrative words (but not statement starters)
             for base in base_narrative_words:
-                if word_lower.startswith(base) and len(word_lower) > len(base):
+                if word.startswith(base) and len(word) > len(base):
                     return True
             return False
 
@@ -301,183 +389,138 @@ class Parser:
 
         while self.current_token():
             token = self.current_token()
-            word = token.value.lower() if token.value else ""
+            word = word_of(token)
 
-            # Special case: "a" can be narrative (like "a counter", "a while loop")
-            # Check this BEFORE checking statement starters, so we can skip "a" even if followed by statement starters
-            if token.type == TokenType.KEYWORD and word == "a":
-                peek = self.peek_token()
-                # Check if "a" is preceded by narrative words (like "from", "to", "with", etc.)
-                # If so, it's likely narrative even if followed by type keywords
-                is_preceded_by_narrative = False
-                if self.pos > 0:
-                    prev_token = self.tokens[self.pos - 1]
-                    if prev_token:
-                        prev_word = prev_token.value.lower() if prev_token.value else ""
-                        narrative_preceders = {
-                            "from",
-                            "to",
-                            "with",
-                            "in",
-                            "on",
-                            "at",
-                            "for",
-                            "of",
-                            "by",
-                            "about",
-                            "into",
-                            "onto",
-                            "upon",
-                        }
-                        if prev_word in narrative_preceders or (
-                            prev_token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD)
-                            and prev_word in base_narrative_words
-                        ):
-                            is_preceded_by_narrative = True
-
-                # If "a" is followed by narrative words, identifiers, or certain keywords, it's probably narrative
-                if peek:
-                    # Check if it's a known statement pattern like "a variable"
-                    if peek.type == TokenType.IDENTIFIER:
-                        if (
-                            peek.value.lower()
-                            not in ("variable", "list", "string", "integer", "number", "boolean")
-                            or is_preceded_by_narrative
-                        ):
-                            self.advance()
-                            skipped_any = True
-                            continue
-                    elif peek.type == TokenType.KEYWORD:
-                        # "a" followed by keywords like "while" (in "a while loop") is narrative
-                        # But "a variable" is a statement pattern, so check for that
-                        # However, if preceded by narrative words, skip it anyway
-                        if (
-                            peek.value.lower()
-                            not in ("variable", "list", "string", "integer", "number", "boolean")
-                            or is_preceded_by_narrative
-                        ):
-                            self.advance()
-                            skipped_any = True
-                            continue
-
-            # If we hit a statement starter exactly, stop skipping
-            # But "while" can be narrative (like "use a while loop"), so check context
-            if token.type == TokenType.KEYWORD and word in statement_starters:
-                # Special case: "while" in "a while loop" is narrative
-                if word == "while":
-                    peek = self.peek_token()
-                    # If "while" is followed by "loop" (identifier), it's narrative
-                    if peek and peek.type == TokenType.IDENTIFIER and peek.value.lower() == "loop":
-                        self.advance()
-                        skipped_any = True
-                        continue
-                break
-            if token.type == TokenType.IDENTIFIER and word in statement_starters:
-                break
-
-            # If we hit a statement keyword (like "variable"), stop skipping
-            # Exception: "it" can be narrative (like "add it to") or part of a statement (like "set it to")
-            # Only stop skipping "it" if it's followed by "to" and preceded by "set"
-            if token.type == TokenType.KEYWORD and word in statement_keywords:
-                if word == "it":
-                    # Check if "it" is part of "set it to" pattern
-                    peek = self.peek_token()
-                    if peek and peek.value.lower() == "to":
-                        # Check if "set" appears recently before "it"
-                        is_set_it_to = False
-                        for i in range(max(0, self.pos - 5), self.pos):
-                            if i < len(self.tokens) and self.tokens[i].value.lower() == "set":
-                                is_set_it_to = True
-                                break
-                        if is_set_it_to:
-                            break
-                        self.advance()
-                        skipped_any = True
-                        continue
-                else:
+            if token.type == TokenType.KEYWORD and word in {"uma", "um"}:
+                peek = word_of(self.peek_token())
+                if peek == "variavel" or peek in TYPE_NAMES:
                     break
-
-            # Check if "each" is part of "for each" (statement) vs narrative (like "of each number")
-            if token.type == TokenType.KEYWORD and word == "each":
-                if self.pos > 0:
-                    prev_token = self.tokens[self.pos - 1]
-                    if prev_token and prev_token.value.lower() == "for":
-                        break
                 self.advance()
                 skipped_any = True
                 continue
 
-            # Check if this might be an identifier starting an assignment (x becomes, x equals, etc.)
-            if token.type == TokenType.IDENTIFIER:
-                peek = self.peek_token()
-                if peek and peek.value.lower() in ("equals", "=", "becomes", "become"):
+            if word == "para":
+                if self.peek_word() == "cada":
                     break
-                # Only break for "is now" pattern (assignment), not just "is" (which could be comparison)
-                if peek and peek.value.lower() == "is":
-                    peek2 = self.peek_token(2)
-                    if peek2 and peek2.value.lower() == "now":
-                        break
+                self.advance()
+                skipped_any = True
+                continue
 
-            # Skip narrative words and punctuation
-            # Also skip "to" if it's part of narrative (like "want to", "need to")
-            # But don't skip "now" if it's part of "is now" assignment pattern
-            # Don't skip "and" if it's part of "and set it to" pattern
-            is_now_in_assignment = False
-            if word == "now":
-                if self.pos > 0:
-                    prev_token = self.tokens[self.pos - 1]
-                    if prev_token and prev_token.value.lower() == "is":
-                        is_now_in_assignment = True
-                    for i in range(max(0, self.pos - 3), self.pos):
-                        if i < len(self.tokens) and self.tokens[i].value.lower() == "is":
-                            has_keyword_between = False
-                            for j in range(i + 1, self.pos):
-                                if j < len(self.tokens):
-                                    tok_val = self.tokens[j].value.lower()
-                                    if tok_val in statement_starters:
-                                        has_keyword_between = True
-                                        break
-                            if not has_keyword_between:
-                                is_now_in_assignment = True
-                                break
+            if word == "se":
+                prev = word_of(self.tokens[self.pos - 1]) if self.pos > 0 else ""
+                peek = self.peek_word()
+                if prev in {"saber", "verificar", "checar"} or peek in {"algo", "o", "a", "uma"}:
+                    self.advance()
+                    skipped_any = True
+                    continue
+                break
 
-            is_and_in_statement = False
-            if word == "and":
-                peek = self.peek_token()
-                if peek and peek.value.lower() == "set":
-                    is_and_in_statement = True
+            if word == "enquanto":
+                peek = self.peek_word()
+                if peek in {"loop", "laco"}:
+                    self.advance()
+                    skipped_any = True
+                    continue
+                break
 
-            is_do_in_loop = False
-            if word == "do":
-                for i in range(max(0, self.pos - 5), self.pos):
-                    if i < len(self.tokens):
-                        tok_val = self.tokens[i].value.lower()
-                        if tok_val in ("for", "while", "repeat", "each"):
+            if token.type == TokenType.KEYWORD and word in statement_starters:
+                break
+            if token.type == TokenType.IDENTIFIER and word in statement_starters:
+                break
+
+            if word == "como":
+                peek = self.peek_word()
+                if peek in TYPE_NAMES or peek in {"um", "uma"}:
+                    break
+                self.advance()
+                skipped_any = True
+                continue
+
+            if word == "cada":
+                prev = word_of(self.tokens[self.pos - 1]) if self.pos > 0 else ""
+                if prev == "para":
+                    break
+                self.advance()
+                skipped_any = True
+                continue
+
+            if word in statement_keywords:
+                if word == "faca":
+                    is_do_in_loop = False
+                    for i in range(max(0, self.pos - 8), self.pos):
+                        if word_of(self.tokens[i]) in (
+                            "para",
+                            "enquanto",
+                            "repita",
+                            "repetir",
+                            "cada",
+                        ):
                             is_do_in_loop = True
                             break
+                    if is_do_in_loop:
+                        break
+                    self.advance()
+                    skipped_any = True
+                    continue
+                if word == "mais":
+                    peek = self.peek_word()
+                    if peek in {"tarde", "para"} or (
+                        self.peek_token() and self.peek_token().type == TokenType.IDENTIFIER
+                    ):
+                        self.advance()
+                        skipped_any = True
+                        continue
+                break
+
+            if token.type == TokenType.IDENTIFIER:
+                peek = self.peek_word()
+                if peek in {"passa", "passe"}:
+                    break
+                if peek == "agora":
+                    peek2 = self.peek_word(2)
+                    if peek2 in {"eh", "e"} or peek2 == "":
+                        break
+
+            is_agora_assignment = False
+            if word == "agora":
+                peek = self.peek_word()
+                if peek in {"eh", "e"}:
+                    is_agora_assignment = True
+                if self.pos > 0 and self.tokens[self.pos - 1].type == TokenType.IDENTIFIER:
+                    is_agora_assignment = True
+
+            is_e_in_statement = False
+            if word == "e":
+                peek = self.peek_word()
+                if peek in DEFINE_VERBS or peek in {"maior", "menor", "igual", "diferente"}:
+                    is_e_in_statement = True
+
+            is_ser_in_assignment = False
+            if word == "ser":
+                for i in range(max(0, self.pos - 3), self.pos):
+                    if word_of(self.tokens[i]) in {"passa", "passe"}:
+                        is_ser_in_assignment = True
+                        break
 
             if (
                 (
                     token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD)
                     and is_narrative_word(word)
-                    and not is_now_in_assignment
-                    and not is_and_in_statement
-                    and not is_do_in_loop
+                    and not is_agora_assignment
+                    and not is_e_in_statement
+                    and not is_ser_in_assignment
                 )
-                or (token.type == TokenType.KEYWORD and word == "to" and skipped_any)
                 or (token.type == TokenType.PUNCTUATION and token.value in (",", ".", ";", ":"))
             ):
                 self.advance()
                 skipped_any = True
             elif skipped_any and token.type == TokenType.IDENTIFIER:
-                peek = self.peek_token()
-                if peek and peek.value.lower() in ("equals", "=", "becomes", "become", "is"):
+                peek = self.peek_word()
+                if peek in {"passa", "passe", "agora"}:
                     break
                 self.advance()
                 skipped_any = True
             else:
-                if not skipped_any:
-                    break
                 break
 
     def parse(self) -> Program:
@@ -499,300 +542,172 @@ class Parser:
         self.skip_narrative_words()
 
         token = self.current_token()
-        if token and token.value.lower() == "set":
-            peek = self.peek_token()
-            if peek and peek.value.lower() == "up":
-                self.advance()
-                self.advance()
-                token_after_up = self.current_token()
-                if token_after_up and token_after_up.value.lower() == "a":
-                    self.advance()
-                    token_after_a = self.current_token()
-                    if token_after_a and token_after_a.type == TokenType.IDENTIFIER:
-                        self.advance()
-                self.skip_narrative_words()
-                return self.parse_statement()
-
-        token = self.current_token()
-
         if not token or token.type in (TokenType.EOF, TokenType.PARAGRAPH_BREAK):
             return None
 
-        token_value = token.value.lower() if token.value else ""
-        saved_pos = self.pos
+        token_value = word_of(token)
 
-        if token_value.startswith("declare"):
-            if token_value != "declare":
-                self.advance()
-            if self.match_keyword_sequence(["a", "variable", "named"]):
-                self.pos = saved_pos
-                if self.match_keyword_sequence(["declare", "a", "variable", "named"]):
-                    return self.parse_variable_declaration()
-                self.pos = saved_pos
-
-        if token_value.startswith("create"):
+        if token_value in CREATE_VERBS or token_value in DECLARE_VERBS:
             return self.parse_variable_declaration()
 
-        if self.match_keyword_sequence(["declare", "a", "variable", "named"]):
-            return self.parse_variable_declaration()
+        if token_value in DEFINE_VERBS:
+            return self.parse_assignment()
 
-        if token.value.lower() == "set":
-            if self.match_keyword_sequence(["set"]):
-                return self.parse_assignment()
-
-        if self.match_keyword_sequence(["for", "each"]):
+        if token_value == "para" and self.peek_word() == "cada":
             return self.parse_for_loop()
 
-        if self.match_keyword_sequence(["while"]):
+        if token_value == "enquanto":
             return self.parse_while_loop()
 
-        if self.match_keyword_sequence(["repeat"]):
+        if token_value in REPEAT_VERBS:
             return self.parse_repeat_loop()
 
         if token.type == TokenType.IDENTIFIER:
-            peek = self.peek_token()
-            if peek:
-                if peek.value.lower() in ("equals", "=", "becomes", "become"):
-                    return self.parse_assignment()
-                elif peek.value.lower() == "is":
-                    peek2 = self.peek_token(2)
-                    if peek2 and peek2.value.lower() == "now":
-                        return self.parse_assignment()
+            peek = self.peek_word()
+            if peek in {"passa", "passe"}:
+                return self.parse_assignment()
+            if peek == "agora":
+                return self.parse_assignment()
 
         if token:
             self.advance()
         return None
 
     def match_keyword_sequence(self, keywords: List[str]) -> bool:
-        """Check if the next tokens match a sequence of keywords, handling verb forms."""
+        """Check if the next tokens match a sequence of keywords."""
         saved_pos = self.pos
 
-        for i, keyword in enumerate(keywords):
+        for keyword in keywords:
             token = self.current_token()
             if not token:
                 self.pos = saved_pos
                 return False
-
-            token_value = token.value.lower() if token.value else ""
-            keyword_lower = keyword.lower()
-
-            if (
-                token.type == TokenType.KEYWORD or token.type == TokenType.IDENTIFIER
-            ) and token_value == keyword_lower:
-                self.advance()
-                continue
-
-            if (
-                i == 0
-                and token_value.startswith(keyword_lower)
-                and len(token_value) > len(keyword_lower)
-            ):
-                self.advance()
-                continue
-
-            self.pos = saved_pos
-            return False
+            if token.type not in (TokenType.KEYWORD, TokenType.IDENTIFIER):
+                self.pos = saved_pos
+                return False
+            if word_of(token) != fold_word(keyword):
+                self.pos = saved_pos
+                return False
+            self.advance()
 
         self.pos = saved_pos
         return True
 
+    def parse_name(self) -> str:
+        """Parse a variable name from an identifier or keyword."""
+        token = self.current_token()
+        if token is None:
+            self.error("Expected identifier for variable name")
+            return ""
+        if token.type in (TokenType.IDENTIFIER, TokenType.KEYWORD):
+            self.advance()
+            return token.value
+        self.error(f"Expected identifier for variable name, got {token.type.name}")
+        return ""
+
     def parse_variable_declaration(self) -> VariableDeclaration:
-        """Parse: declare a variable named X [as TYPE] and set it to Y
-        or: create a variable called X [as TYPE] and set it to Y
-        Can also be called after advancing past verb forms like "creating"."""
-        token = self.current_token()
-        if not token:
-            self.error("Unexpected end of input in variable declaration")
-        token_value = token.value.lower() if token.value else ""
+        """Parse: crie uma variavel chamada X [como TIPO] e defina ela como Y."""
+        token_value = self.current_word()
+        if token_value in CREATE_VERBS or token_value in DECLARE_VERBS:
+            self.advance()
 
-        if token_value == "a":
-            peek = self.peek_token(1)
-            if peek and peek.value.lower() == "variable":
-                peek2 = self.peek_token(2)
-                if peek2 and peek2.value.lower() == "named":
-                    self.skip_optional(TokenType.KEYWORD, "a")
-                    self.expect(TokenType.KEYWORD, "variable")
-                    self.expect(TokenType.KEYWORD, "named")
-                elif peek2 and peek2.value.lower() == "called":
-                    self.skip_optional(TokenType.KEYWORD, "a")
-                    self.expect(TokenType.KEYWORD, "variable")
-                    self.expect(TokenType.KEYWORD, "called")
-                else:
-                    self.error("Expected 'named' or 'called' after 'variable'")
-            else:
-                self.error("Expected 'variable' after 'a'")
-        elif token_value == "declare" or (
-            token_value.startswith("declare") and len(token_value) > len("declare")
-        ):
-            if token.type == TokenType.KEYWORD:
-                self.expect(TokenType.KEYWORD, "declare")
-            else:
-                self.advance()
-            self.skip_optional(TokenType.KEYWORD, "a")
-            self.expect(TokenType.KEYWORD, "variable")
-            self.expect(TokenType.KEYWORD, "named")
-        elif token_value == "create" or (
-            token_value.startswith("create") and len(token_value) > len("create")
-        ):
-            if token.type == TokenType.KEYWORD:
-                self.expect(TokenType.KEYWORD, "create")
-            else:
-                self.advance()
-            self.skip_narrative_words()
-            self.skip_optional(TokenType.KEYWORD, "a")
-            self.expect(TokenType.KEYWORD, "variable")
-            self.expect(TokenType.KEYWORD, "called")
-        else:
-            self.error("Expected 'declare' or 'create' for variable declaration")
+        self.skip_narrative_words()
+        self.skip_any_word({"uma", "um"})
+        self.expect(TokenType.KEYWORD, "variavel")
+        if not self.skip_any_word({"chamada", "chamado", "nomeada", "nomeado"}):
+            self.error("Expected 'chamada' or 'chamado' after 'variavel'")
 
-        token = self.current_token()
-        if token.type == TokenType.IDENTIFIER:
-            name_token = self.expect(TokenType.IDENTIFIER)
-            name = name_token.value
-        elif token.type == TokenType.KEYWORD:
-            name_token = self.expect(TokenType.KEYWORD)
-            name = name_token.value
-        else:
-            self.error(f"Expected identifier for variable name, got {token.type.name}")
-            name = ""
+        name = self.parse_name()
 
         var_type = None
-        if self.skip_optional(TokenType.KEYWORD, "as"):
-            self.skip_optional(TokenType.KEYWORD, "a")
-            self.skip_optional(TokenType.KEYWORD, "an")
-            type_token = self.expect(TokenType.KEYWORD)
-            var_type = type_token.value
+        if self.skip_optional_word("como"):
+            self.skip_any_word({"um", "uma"})
+            if self.current_word() in TYPE_NAMES:
+                var_type = self.current_word()
+                self.advance()
 
-        if self.skip_optional(TokenType.KEYWORD, "and"):
-            self.expect(TokenType.KEYWORD, "set")
-            self.skip_optional(TokenType.KEYWORD, "it")
-            self.expect(TokenType.KEYWORD, "to")
-        else:
-            self.expect(TokenType.KEYWORD, "to")
+        self.skip_optional_word("e")
+        if self.current_word() in DEFINE_VERBS:
+            self.advance()
+            self.skip_any_word({"ela", "ele"})
+            self.skip_optional_word("como")
 
         value = self.parse_expression()
-
         return VariableDeclaration(name, value, var_type)
 
     def parse_assignment(self) -> Assignment:
-        """Parse: set X to Y or X equals Y or X becomes Y or X is now Y"""
-        token = self.current_token()
-
-        if token.value.lower() == "set":
-            self.expect(TokenType.KEYWORD, "set")
-            name_token = self.current_token()
-            if name_token and (
-                name_token.type == TokenType.IDENTIFIER
-                or (name_token.type == TokenType.KEYWORD and name_token.value.lower() == "it")
-            ):
-                self.advance()
-            else:
-                self.error(
-                    f"Expected identifier for variable name, got {name_token.type.name if name_token else 'EOF'}"
-                )
-            self.expect(TokenType.KEYWORD, "to")
+        """Parse: defina X como Y / X passa a ser Y / X agora e Y."""
+        if self.current_word() in DEFINE_VERBS:
+            self.advance()
+            name = self.parse_name()
+            self.skip_optional_word("como")
             value = self.parse_expression()
-            return Assignment(name_token.value, value)
-        else:
-            name_token = self.expect(TokenType.IDENTIFIER)
-            if (
-                self.skip_optional(TokenType.KEYWORD, "equals")
-                or self.skip_optional(TokenType.OPERATOR, "=")
-                or self.skip_optional(TokenType.KEYWORD, "becomes")
-                or self.skip_optional(TokenType.KEYWORD, "become")
-            ):
-                value = self.parse_expression()
-                return Assignment(name_token.value, value)
-            elif self.skip_optional(TokenType.KEYWORD, "is"):
-                if self.skip_optional(TokenType.KEYWORD, "now"):
-                    value = self.parse_expression()
-                    return Assignment(name_token.value, value)
-                else:
-                    self.error("Expected 'now' after 'is' in assignment")
-            else:
-                self.error(
-                    "Expected 'equals', '=', 'become', 'becomes', or 'is now' after identifier"
-                )
+            return Assignment(name, value)
+
+        name = self.parse_name()
+        if self.skip_any_word({"passa", "passe"}):
+            self.skip_optional_word("a")
+            self.skip_optional_word("ser")
+            value = self.parse_expression()
+            return Assignment(name, value)
+
+        if self.skip_optional_word("agora"):
+            self.skip_any_word({"eh", "e"})
+            value = self.parse_expression()
+            return Assignment(name, value)
+
+        self.error("Expected 'passa a ser' or 'agora e' after identifier")
 
     def parse_for_loop(self) -> ForLoop:
-        """Parse: for each X in Y, do ..."""
-        self.expect(TokenType.KEYWORD, "for")
-        self.expect(TokenType.KEYWORD, "each")
+        """Parse: para cada X em Y, faca ..."""
+        self.expect(TokenType.KEYWORD, "para")
+        self.expect(TokenType.KEYWORD, "cada")
 
-        token = self.current_token()
-        if token.type == TokenType.IDENTIFIER:
-            item_token = self.expect(TokenType.IDENTIFIER)
-            item_var = item_token.value
-        elif token.type == TokenType.KEYWORD:
-            item_token = self.expect(TokenType.KEYWORD)
-            item_var = item_token.value
-        else:
-            self.error(f"Expected identifier for loop variable, got {token.type.name}")
-            item_var = ""
-
-        self.expect(TokenType.KEYWORD, "in")
-
+        item_var = self.parse_name()
+        self.expect(TokenType.KEYWORD, "em")
         iterable = self.parse_expression()
 
         self.skip_optional(TokenType.PUNCTUATION, ",")
-
         self.skip_narrative_words()
-
-        self.skip_optional(TokenType.KEYWORD, "do")
+        self.skip_optional_word("faca")
 
         body = self.parse_block()
-
         return ForLoop(item_var, iterable, body)
 
     def parse_while_loop(self) -> WhileLoop:
-        """Parse: while X is true, do ... or while X, do ..."""
-        self.expect(TokenType.KEYWORD, "while")
-
+        """Parse: enquanto X, faca ..."""
+        self.expect(TokenType.KEYWORD, "enquanto")
         condition = self.parse_expression()
 
-        if (
-            self.current_token()
-            and self.current_token().type == TokenType.KEYWORD
-            and self.current_token().value.lower() == "is"
+        if self.current_word() in IS_WORDS or (
+            self.current_word() == "e" and self.peek_word() in BOOL_TRUE
         ):
             self.advance()
-            if (
-                self.current_token()
-                and self.current_token().type == TokenType.KEYWORD
-                and self.current_token().value.lower() == "true"
-            ):
-                self.advance()
+            self.skip_any_word(BOOL_TRUE)
 
         self.skip_optional(TokenType.PUNCTUATION, ",")
-
         self.skip_narrative_words()
-
-        self.skip_optional(TokenType.KEYWORD, "do")
+        self.skip_optional_word("faca")
 
         body = self.parse_block()
-
         return WhileLoop(condition, body)
 
     def parse_repeat_loop(self) -> RepeatLoop:
-        """Parse: repeat N times, do ..."""
-        self.expect(TokenType.KEYWORD, "repeat")
-
+        """Parse: repita N vezes, faca ..."""
+        self.skip_any_word(REPEAT_VERBS)
         count = self.parse_primary()
-
-        self.expect(TokenType.KEYWORD, "times")
+        self.expect(TokenType.KEYWORD, "vezes")
 
         self.skip_optional(TokenType.PUNCTUATION, ",")
-
         self.skip_narrative_words()
-
-        self.skip_optional(TokenType.KEYWORD, "do")
+        self.skip_optional_word("faca")
 
         body = self.parse_block()
-
         return RepeatLoop(count, body)
 
-    def parse_block(self) -> List[Statement]:
+    def parse_block(self, stop_keywords: Optional[Set[str]] = None) -> List[Statement]:
         """Parse a block of statements."""
+        stop = set(stop_keywords or [])
         body = []
 
         self.skip_paragraph_breaks()
@@ -800,6 +715,8 @@ class Parser:
         while True:
             token = self.current_token()
             if not token or token.type == TokenType.EOF or token.type == TokenType.PARAGRAPH_BREAK:
+                break
+            if word_of(token) in stop:
                 break
 
             saved_pos = self.pos
@@ -813,53 +730,43 @@ class Parser:
 
         return body
 
+    def _statement_keywords(self) -> Set[str]:
+        return {
+            "crie",
+            "criar",
+            "criando",
+            "declare",
+            "declarar",
+            "declarando",
+            "defina",
+            "definir",
+            "para",
+            "enquanto",
+            "repita",
+            "repetir",
+            "se",
+            "entao",
+            "senao",
+            "cada",
+        }
+
     def parse_expression(self) -> Expression:
         """Parse an expression."""
         token = self.current_token()
-        if token:
-            statement_keywords = {
-                "create",
-                "declare",
-                "set",
-                "for",
-                "while",
-                "repeat",
-                "if",
-                "then",
-                "else",
-                "each",
-            }
-            if (token.type == TokenType.KEYWORD and token.value.lower() in statement_keywords) or (
-                token.type == TokenType.IDENTIFIER and token.value.lower() in statement_keywords
-            ):
-                self.error(f"Unexpected statement keyword '{token.value}' - expression expected")
+        if token and word_of(token) in self._statement_keywords():
+            self.error(f"Unexpected statement keyword '{token.value}' - expression expected")
         return self.parse_logical_or()
 
     def parse_logical_or(self) -> Expression:
         """Parse logical OR expression."""
         left = self.parse_logical_and()
+        starters = self._statement_keywords()
 
-        statement_keywords = {
-            "create",
-            "declare",
-            "set",
-            "for",
-            "while",
-            "repeat",
-            "if",
-            "then",
-            "else",
-            "each",
-        }
-
-        while self.current_token() and self.current_token().value.lower() == "or":
-            peek = self.peek_token()
-            if peek and (
-                (peek.type == TokenType.KEYWORD and peek.value.lower() in statement_keywords)
-                or (peek.type == TokenType.IDENTIFIER and peek.value.lower() in statement_keywords)
-            ):
+        while self.current_word() == "ou":
+            peek = self.peek_word()
+            if peek in starters:
                 break
-            op_token = self.expect(TokenType.KEYWORD, "or")
+            self.advance()
             right = self.parse_logical_and()
             left = BinaryOp(left, "or", right)
 
@@ -868,50 +775,49 @@ class Parser:
     def parse_logical_and(self) -> Expression:
         """Parse logical AND expression."""
         left = self.parse_comparison()
-
-        statement_keywords = {
-            "create",
+        starters = self._statement_keywords()
+        narrative_after_e = {
+            "por",
+            "fim",
+            "depois",
+            "tambem",
+            "assim",
+            "vamos",
+            "crie",
+            "criar",
             "declare",
-            "set",
-            "for",
-            "while",
-            "repeat",
-            "if",
-            "then",
-            "else",
-            "each",
-        }
-        narrative_after_and = {
-            "finally",
-            "then",
-            "next",
-            "also",
-            "so",
-            "let",
-            "us",
-            "we",
-            "create",
-            "declare",
-            "set",
-            "for",
-            "while",
-            "repeat",
-            "each",
+            "defina",
+            "para",
+            "enquanto",
+            "repita",
+            "cada",
+            "agora",
+            "finalmente",
+            "logo",
         }
 
-        while self.current_token() and self.current_token().value.lower() == "and":
-            peek = self.peek_token()
-            if peek and (
-                peek.value.lower() in narrative_after_and
-                or (peek.type == TokenType.KEYWORD and peek.value.lower() in statement_keywords)
-                or (peek.type == TokenType.IDENTIFIER and peek.value.lower() in statement_keywords)
-            ):
+        while self.current_word() == "e":
+            peek = self.peek_word()
+            if peek in {"maior", "menor", "igual", "diferente"}:
                 break
-            op_token = self.expect(TokenType.KEYWORD, "and")
+            if peek in narrative_after_e or peek in starters:
+                break
+            self.advance()
             right = self.parse_comparison()
             left = BinaryOp(left, "and", right)
 
         return left
+
+    def _consume_is_word(self) -> bool:
+        """Consume é/eh, or unaccented e before a comparison word."""
+        word = self.current_word()
+        if word in IS_WORDS:
+            self.advance()
+            return True
+        if word == "e" and self.peek_word() in {"maior", "menor", "igual", "diferente"}:
+            self.advance()
+            return True
+        return False
 
     def parse_comparison(self) -> Expression:
         """Parse comparison expression."""
@@ -919,67 +825,41 @@ class Parser:
 
         while self.current_token():
             token = self.current_token()
+            word = word_of(token)
 
-            if token.type == TokenType.KEYWORD:
-                if token.value.lower() == "is":
+            if token.type in (TokenType.KEYWORD, TokenType.IDENTIFIER):
+                saved = self.pos
+                if self._consume_is_word():
+                    word = self.current_word()
+
+                if word == "maior":
                     self.advance()
-                    token = self.current_token()
-                    if token and token.type == TokenType.KEYWORD:
-                        if token.value.lower() == "greater":
-                            self.advance()
-                            token = self.current_token()
-                            if token and token.value.lower() == "than":
-                                self.advance()
-                            else:
-                                self.error("Expected 'than' after 'is greater'")
-                            right = self.parse_additive()
-                            left = BinaryOp(left, ">", right)
-                            continue
-                        elif token.value.lower() == "less":
-                            self.advance()
-                            token = self.current_token()
-                            if token and token.value.lower() == "than":
-                                self.advance()
-                            else:
-                                self.error("Expected 'than' after 'is less'")
-                            right = self.parse_additive()
-                            left = BinaryOp(left, "<", right)
-                            continue
-                        elif token.value.lower() == "equal":
-                            self.advance()
-                            self.skip_optional(TokenType.KEYWORD, "to")
-                            right = self.parse_additive()
-                            left = BinaryOp(left, "==", right)
-                            continue
-                    # If 'is' is not followed by a comparison keyword, backtrack
-                    self.pos -= 1
-                    break
-                elif token.value.lower() == "greater":
-                    self.advance()
-                    token = self.current_token()
-                    if token and token.value.lower() == "than":
-                        self.advance()
-                    else:
-                        self.error("Expected 'than' after 'greater'")
+                    self.skip_optional_word("que")
                     right = self.parse_additive()
                     left = BinaryOp(left, ">", right)
                     continue
-                elif token.value.lower() == "less":
+                if word == "menor":
                     self.advance()
-                    token = self.current_token()
-                    if token and token.value.lower() == "than":
-                        self.advance()
-                    else:
-                        self.error("Expected 'than' after 'less'")
+                    self.skip_optional_word("que")
                     right = self.parse_additive()
                     left = BinaryOp(left, "<", right)
                     continue
-                elif token.value.lower() == "equal":
+                if word == "igual":
                     self.advance()
-                    self.skip_optional(TokenType.KEYWORD, "to")
+                    self.skip_optional_word("a")
                     right = self.parse_additive()
                     left = BinaryOp(left, "==", right)
                     continue
+                if word == "diferente":
+                    self.advance()
+                    self.skip_optional_word("de")
+                    right = self.parse_additive()
+                    left = BinaryOp(left, "!=", right)
+                    continue
+
+                if self.pos != saved:
+                    self.pos = saved
+                    break
 
             if token.type == TokenType.OPERATOR and token.value in (
                 "==",
@@ -1005,30 +885,17 @@ class Parser:
 
         while self.current_token():
             token = self.current_token()
+            word = word_of(token)
 
-            if token.type == TokenType.KEYWORD:
-                if token.value.lower() == "add":
-                    self.advance()
-                    self.skip_optional(TokenType.KEYWORD, "to")
-                    right = self.parse_multiplicative()
-                    left = BinaryOp(left, "+", right)
-                    continue
-                elif token.value.lower() == "plus":
-                    self.advance()
-                    right = self.parse_multiplicative()
-                    left = BinaryOp(left, "+", right)
-                    continue
-                elif token.value.lower() == "subtract":
-                    self.advance()
-                    self.skip_optional(TokenType.KEYWORD, "from")
-                    right = self.parse_multiplicative()
-                    left = BinaryOp(left, "-", right)
-                    continue
-                elif token.value.lower() == "minus":
-                    self.advance()
-                    right = self.parse_multiplicative()
-                    left = BinaryOp(left, "-", right)
-                    continue
+            if token.type in (TokenType.KEYWORD, TokenType.IDENTIFIER) and word in {
+                "mais",
+                "menos",
+            }:
+                op = "+" if word == "mais" else "-"
+                self.advance()
+                right = self.parse_multiplicative()
+                left = BinaryOp(left, op, right)
+                continue
 
             if token.type == TokenType.OPERATOR and token.value in ("+", "-"):
                 op = token.value
@@ -1047,25 +914,20 @@ class Parser:
 
         while self.current_token():
             token = self.current_token()
+            word = word_of(token)
 
-            if token.type == TokenType.KEYWORD:
-                if token.value.lower() == "multiply":
-                    self.advance()
-                    self.skip_optional_keyword_or_identifier("by")
-                    right = self.parse_unary()
-                    left = BinaryOp(left, "*", right)
-                    continue
-                elif token.value.lower() == "times":
-                    self.advance()
-                    right = self.parse_unary()
-                    left = BinaryOp(left, "*", right)
-                    continue
-                elif token.value.lower() == "divide" or token.value.lower() == "divided":
-                    self.advance()
-                    self.skip_optional_keyword_or_identifier("by")
-                    right = self.parse_unary()
-                    left = BinaryOp(left, "/", right)
-                    continue
+            if token.type in (TokenType.KEYWORD, TokenType.IDENTIFIER) and word == "vezes":
+                self.advance()
+                right = self.parse_unary()
+                left = BinaryOp(left, "*", right)
+                continue
+
+            if token.type in (TokenType.KEYWORD, TokenType.IDENTIFIER) and word == "dividido":
+                self.advance()
+                self.skip_optional_word("por")
+                right = self.parse_unary()
+                left = BinaryOp(left, "/", right)
+                continue
 
             if token.type == TokenType.OPERATOR and token.value in ("*", "/"):
                 op = token.value
@@ -1081,8 +943,9 @@ class Parser:
     def parse_unary(self) -> Expression:
         """Parse unary expression."""
         token = self.current_token()
+        word = word_of(token)
 
-        if token and token.type == TokenType.KEYWORD and token.value.lower() == "not":
+        if token and word == "nao":
             self.advance()
             operand = self.parse_unary()
             return UnaryOp("not", operand)
@@ -1101,20 +964,10 @@ class Parser:
         if not token:
             self.error("Unexpected end of input")
 
-        statement_keywords = {
-            "create",
-            "declare",
-            "set",
-            "for",
-            "while",
-            "repeat",
-            "if",
-            "then",
-            "else",
-            "each",
-        }
+        starters = self._statement_keywords()
+        word = word_of(token)
 
-        if token.type == TokenType.KEYWORD and token.value.lower() in statement_keywords:
+        if token.type == TokenType.KEYWORD and word in starters:
             self.error(f"Unexpected statement keyword '{token.value}' in expression")
 
         if token.type == TokenType.NUMBER:
@@ -1126,40 +979,37 @@ class Parser:
             self.advance()
             return Literal(token.value)
 
-        if token.type == TokenType.KEYWORD and token.value.lower() in ("true", "false"):
+        if token.type == TokenType.KEYWORD and word in BOOL_TRUE:
             self.advance()
-            return Literal(token.value.lower() == "true")
+            return Literal(True)
+
+        if token.type == TokenType.KEYWORD and word in BOOL_FALSE:
+            self.advance()
+            return Literal(False)
 
         if token.type == TokenType.IDENTIFIER:
-            if token.value.lower() in statement_keywords:
+            if word in starters:
                 self.error(f"Unexpected statement keyword '{token.value}' in expression")
             self.advance()
             return Identifier(token.value)
 
         if token.type == TokenType.KEYWORD:
-            if token.value.lower() not in (
-                "true",
-                "false",
-                "and",
-                "or",
-                "not",
-                "in",
-                "is",
-                "do",
-                "to",
-                "from",
-                "by",
-                "than",
-                "equals",
-                "plus",
-                "minus",
-                "times",
-                "divided",
-                "becomes",
-                "called",
-                "create",
-                "now",
-            ):
+            if word not in starters | {
+                "e",
+                "ou",
+                "nao",
+                "em",
+                "eh",
+                "faca",
+                "como",
+                "mais",
+                "menos",
+                "vezes",
+                "dividido",
+                "passa",
+                "passe",
+                "agora",
+            }:
                 self.advance()
                 return Identifier(token.value)
 
@@ -1191,5 +1041,4 @@ class Parser:
             elements.append(self.parse_expression())
 
         self.expect(TokenType.PUNCTUATION, "]")
-
         return ListLiteral(elements)
