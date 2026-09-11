@@ -10,12 +10,12 @@ long_description = readme_file.read_text(encoding="utf-8") if readme_file.exists
 setup(
     name="ultra-high-level-compiler",
     version="1.0.0",
-    description="An ultra high-level natural language compiler that generates Python code",
+    description="Compilador de linguagem natural em portugues que gera codigo Python",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Jean Reinhold",
     author_email="jeanpaulreinhold@gmail.com",
-    url="https://github.com/yourusername/ultra-high-level-compiler",
+    url="https://github.com/joaobenedetmachado/ultra-high-level-compiler",
     packages=find_packages(),
     py_modules=["cli"],
     python_requires=">=3.7",
@@ -38,5 +38,5 @@ setup(
         "Topic :: Software Development :: Compilers",
         "Topic :: Software Development :: Code Generators",
     ],
-    keywords="compiler natural-language python code-generation",
+    keywords="compilador linguagem-natural portugues python geracao-de-codigo",
 )
