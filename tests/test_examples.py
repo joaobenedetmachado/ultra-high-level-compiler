@@ -40,6 +40,26 @@ for number in numbers:
     assert actual.strip() == expected.strip()
 
 
+def test_operators_uhl():
+    """Test that operators.uhl compiles to expected Python code."""
+    compiler = Compiler()
+    examples_dir = Path(__file__).parent.parent / "examples"
+    actual = compiler.compile_file(str(examples_dir / "operators.uhl"))
+
+    expected = """a = 10.0
+b = 5.0
+sum = a + b
+product = a * b
+difference = a - b
+quotient = a / b
+is_greater = a > b
+is_equal = a == b
+result = a + b * 2
+condition = a > 5 and b < 10"""
+
+    assert actual.strip() == expected.strip()
+
+
 def test_complete_uhl():
     """Test that complete.uhl compiles to expected Python code."""
     compiler = Compiler()
