@@ -118,3 +118,36 @@ idade = input()
 print(idade)"""
 
     assert actual.strip() == expected.strip()
+
+
+def test_senao_se_uhl():
+    """Test that senao_se.uhl compiles to expected Python code."""
+    compiler = Compiler()
+    examples_dir = Path(__file__).parent.parent / "examples"
+    actual = compiler.compile_file(str(examples_dir / "senao_se.uhl"))
+
+    expected = """nota = 7.0
+if nota >= 7:
+    print('aprovado')
+elif nota >= 5:
+    print('recuperacao')
+else:
+    print('reprovado')"""
+
+    assert actual.strip() == expected.strip()
+
+
+def test_funcoes_uhl():
+    """Test that funcoes.uhl compiles to expected Python code."""
+    compiler = Compiler()
+    examples_dir = Path(__file__).parent.parent / "examples"
+    actual = compiler.compile_file(str(examples_dir / "funcoes.uhl"))
+
+    expected = """def soma(a, b):
+    return a + b
+print(soma(2, 3))
+def saudar(nome):
+    print(nome)
+    return nome"""
+
+    assert actual.strip() == expected.strip()
